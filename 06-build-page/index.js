@@ -18,9 +18,9 @@ const checkFolderAccess = async (folder) => {
 
 const createNewFolder = async (folder) => {
   if (await checkFolderAccess(folder)) {
-    await fs.promises.rm(folder, { recursive: true });
+    await fs.rm(folder, { recursive: true }, (err) => err && console.error(err));
   }
-  await fs.promises.mkdir(folder, { recursive: true });
+  await fs.mkdir(folder, { recursive: true }, (err) => err && console.error(err));
   return true;
 };
 
@@ -36,30 +36,49 @@ const copyFiles = async (currentFolder, newFolder, fileName) => {
 
 const bundleStyles = async (currentFolder, newFolder) => {
     const ws = await fs.createWriteStream(newFolder);
-    let files = await fs.promises.readdir(currentFolder, { withFileTypes: true });
-    files = files.reverse();
-    for (let file of files) {
-      if (file.isFile() && path.extname(path.join(pathToStyles, file.name)) === '.css') {
-        const rs = fs.createReadStream(path.join(pathToStyles, file.name), { encoding: 'UTF-8'});
-          rs.pipe(ws);
-      }
-    }
+    fs.readdir(pathToStyles, { withFileTypes: true }, (error, files) => {
+        if (error) console.error(error);
+        else {
+          files.forEach((file) => {
+            if (file.isFile() && path.extname(path.join(pathToStyles, file.name)) === '.css') {
+              const rs = fs.createReadStream(path.join(pathToStyles, file.name), { encoding: 'UTF-8'});
+              rs.pipe(ws);
+            }
+          });
+        }
+      });
   };
 
+// const bundleAccets = async (currentFolder, newFolder) => {
+//     const files = await fs.promises.readdir(currentFolder, { withFileTypes: true }, (err) => err && console.error(err));
+
+//     for (let file of files) {
+//       if (file.isFile()) copyFiles(currentFolder, newFolder, file.name);
+//       else {
+//         if (await createNewFolder(path.join(pathToAssets, file.name))) {
+//             bundleAccets(
+//             path.join(currentFolder, file.name),
+//             path.join(newFolder, file.name),
+//           );
+//         }
+//       }
+//     }
+// };
+
 const bundleAccets = async (currentFolder, newFolder) => {
-    const files = await fs.promises.readdir(currentFolder, { withFileTypes: true });
-    for (let file of files) {
-      if (file.isFile()) copyFiles(currentFolder, newFolder, file.name);
-      else {
-        if (await createNewFolder(path.join(pathToAssets, file.name))) {
-            bundleAccets(
-            path.join(currentFolder, file.name),
-            path.join(newFolder, file.name),
-          );
+  fs.mkdir(path.join(newFolder), {recursive:true}, ()=> {
+    fs.promises.readdir(path.join(currentFolder), {withFileTypes: true})
+      .then (files => files.forEach(element => {
+        if(element.isDirectory()) {
+          bundleAccets(path.join(currentFolder, element.name), path.join(newFolder, element.name));
         }
-      }
-    }
+        if(element.isFile()){
+          fs.promises.copyFile(path.join(currentFolder, element.name), path.join(newFolder, element.name));
+        }
+      }));
+  });
 };
+
 
 const bundleLayout = async () => {
     await fs.readFile(pathToTemplate, 'utf-8', (error, data) => {
@@ -94,7 +113,7 @@ function createProjectDist() {
 
 async function createDist() {
   bundleLayout();
-  bundleAccets(path.join(__dirname, 'assets'), pathToAssets);
+  bundleAccets(path.join(__dirname, 'assets'), path.join(pathToBundle, 'assets'));
   if (await createNewFolder(pathToBundle)) {
     bundleStyles(pathToStyles, path.join(pathToBundle, 'style.css'));
   }
