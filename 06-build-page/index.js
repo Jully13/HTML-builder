@@ -18,9 +18,9 @@ const checkFolderAccess = async (folder) => {
 
 const createNewFolder = async (folder) => {
   if (await checkFolderAccess(folder)) {
-    await fs.rm(folder, { recursive: true }, (err) => err && console.error(err));
+    await fs.promises.rm(folder, { recursive: true }, (err) => err && console.error(err));
   }
-  await fs.mkdir(folder, { recursive: true }, (err) => err && console.error(err));
+  await fs.promises.mkdir(folder, { recursive: true }, (err) => err && console.error(err));
   return true;
 };
 
@@ -36,7 +36,7 @@ const copyFiles = async (currentFolder, newFolder, fileName) => {
 
 const bundleStyles = async (currentFolder, newFolder) => {
     const ws = await fs.createWriteStream(newFolder);
-    fs.readdir(pathToStyles, { withFileTypes: true }, (error, files) => {
+    fs.promises.readdir(pathToStyles, { withFileTypes: true }, (error, files) => {
         if (error) console.error(error);
         else {
           files.forEach((file) => {
@@ -48,22 +48,6 @@ const bundleStyles = async (currentFolder, newFolder) => {
         }
       });
   };
-
-// const bundleAccets = async (currentFolder, newFolder) => {
-//     const files = await fs.promises.readdir(currentFolder, { withFileTypes: true }, (err) => err && console.error(err));
-
-//     for (let file of files) {
-//       if (file.isFile()) copyFiles(currentFolder, newFolder, file.name);
-//       else {
-//         if (await createNewFolder(path.join(pathToAssets, file.name))) {
-//             bundleAccets(
-//             path.join(currentFolder, file.name),
-//             path.join(newFolder, file.name),
-//           );
-//         }
-//       }
-//     }
-// };
 
 const bundleAccets = async (currentFolder, newFolder) => {
   fs.mkdir(path.join(newFolder), {recursive:true}, ()=> {
@@ -81,7 +65,7 @@ const bundleAccets = async (currentFolder, newFolder) => {
 
 
 const bundleLayout = async () => {
-    await fs.readFile(pathToTemplate, 'utf-8', (error, data) => {
+     fs.readFile(pathToTemplate, 'utf-8', (error, data) => {
       if (error) console.error(error);
       let htmlToChange = data;
       let regex = /{{[\s\S]+?}}/g;
@@ -92,7 +76,7 @@ const bundleLayout = async () => {
           if (error) console.error(error);
           if (htmlToChange.includes(tag)) {
             htmlToChange = htmlToChange.replace(tag, tagHtml);
-            fs.writeFile(
+            fs.promises.writeFile(
               path.join(pathToBundle, 'index.html'),
               htmlToChange,
               (error) => {
@@ -105,15 +89,39 @@ const bundleLayout = async () => {
     });
 };
 
+function cleanProjectDist (folder) {
+  fs.access(path.join(__dirname, folder), function(error){
+    if (error) {
+        fs.mkdir(path.join(__dirname, folder), { recursive: true }, (err) => {
+            if (err) {
+                return console.error(err);
+            }
+        });
+    } else {
+        fs.readdir(path.join(__dirname, folder), (err, files) => {
+            if (err) throw err;
+            for (const file of files) {
+              fs.unlink(path.join(__dirname, folder, file), err => {
+                if (err) throw err;
+              });
+            }
+          });
+    }
+  });
+}
+
+
+
 function createProjectDist() {
+    cleanProjectDist(pathToBundle);
     createNewFolder(pathToBundle);
     createNewFolder(pathToAssets);
     createDist();
 }
 
 async function createDist() {
-  bundleLayout();
-  bundleAccets(path.join(__dirname, 'assets'), path.join(pathToBundle, 'assets'));
+  await bundleLayout();
+  await bundleAccets(path.join(__dirname, 'assets'), path.join(pathToBundle, 'assets'));
   if (await createNewFolder(pathToBundle)) {
     bundleStyles(pathToStyles, path.join(pathToBundle, 'style.css'));
   }
