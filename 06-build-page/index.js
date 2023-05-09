@@ -24,15 +24,6 @@ const createNewFolder = async (folder) => {
   return true;
 };
 
-const copyFiles = async (currentFolder, newFolder, fileName) => {
-  await fs.copyFile(
-    path.join(currentFolder, fileName),
-    path.join(newFolder, fileName),
-    function (error) {
-        if (error) console.error(error);
-    },
-  );
-};
 
 const bundleStyles = async (currentFolder, newFolder) => {
     const ws = await fs.createWriteStream(newFolder);
@@ -89,7 +80,7 @@ const bundleLayout = async () => {
     });
 };
 
-function cleanProjectDist (folder) {
+const cleanProjectDist = async (folder) => {
   fs.access(path.join(__dirname, folder), function(error){
     if (error) {
         fs.mkdir(path.join(__dirname, folder), { recursive: true }, (err) => {
@@ -112,14 +103,15 @@ function cleanProjectDist (folder) {
 
 
 
-function createProjectDist() {
-    cleanProjectDist(pathToBundle);
-    createNewFolder(pathToBundle);
-    createNewFolder(pathToAssets);
-    createDist();
+ function createProjectDist() {
+
+     createNewFolder(pathToBundle);
+     createNewFolder(pathToAssets);
+     createDist();
 }
 
 async function createDist() {
+  await cleanProjectDist(pathToBundle);
   await bundleLayout();
   await bundleAccets(path.join(__dirname, 'assets'), path.join(pathToBundle, 'assets'));
   if (await createNewFolder(pathToBundle)) {
