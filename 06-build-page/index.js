@@ -27,17 +27,14 @@ const createNewFolder = async (folder) => {
 
 const bundleStyles = async (currentFolder, newFolder) => {
     const ws = await fs.createWriteStream(newFolder);
-    fs.promises.readdir(currentFolder, { withFileTypes: true }, (error, files) => {
-        if (error) console.error(error);
-        else {
-          files.forEach((file) => {
-            if (file.isFile() && path.extname(path.join(pathToStyles, file.name)) === '.css') {
-              const rs = fs.createReadStream(path.join(pathToStyles, file.name), { encoding: 'UTF-8'});
-              rs.pipe(ws);
-            }
-          });
-        }
-      });
+    let files = await fs.promises.readdir(currentFolder, { withFileTypes: true });
+    files = files.reverse();
+    for (let file of files) {
+      if (file.isFile() && path.extname(path.join(pathToStyles, file.name)) === '.css') {
+        const rs = fs.createReadStream(path.join(pathToStyles, file.name), { encoding: 'UTF-8'});
+          rs.pipe(ws);
+      }
+    }
   };
 
 const bundleAccets = async (currentFolder, newFolder) => {
