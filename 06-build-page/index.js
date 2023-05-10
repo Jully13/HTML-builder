@@ -27,7 +27,7 @@ const createNewFolder = async (folder) => {
 
 const bundleStyles = async (currentFolder, newFolder) => {
     const ws = await fs.createWriteStream(newFolder);
-    fs.promises.readdir(pathToStyles, { withFileTypes: true }, (error, files) => {
+    fs.promises.readdir(currentFolder, { withFileTypes: true }, (error, files) => {
         if (error) console.error(error);
         else {
           files.forEach((file) => {
